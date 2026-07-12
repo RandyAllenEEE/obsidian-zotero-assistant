@@ -6,6 +6,8 @@ export type Format =
   | 'formatted-bibliography'
   | 'template';
 
+export type CitationLinkType = 'none' | 'zotero-item' | 'url' | 'doi';
+
 export interface CitationFormat {
   name: string;
   format: Format;
@@ -14,6 +16,7 @@ export interface CitationFormat {
   cslStyle?: string;
   template?: string;
   addZoteroLink?: boolean;
+  citationLinkType?: CitationLinkType;
 }
 
 export type Database = 'Zotero' | 'Juris-M' | 'Custom';

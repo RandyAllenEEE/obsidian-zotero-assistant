@@ -54,6 +54,15 @@
       "command": "Command",
       "brackets": "Use Brackets",
       "deleteButton": "Delete",
+      "linkType": {
+        "label": "Citation Link",
+        "options": {
+          "none": "No link",
+          "zoteroItem": "Zotero item",
+          "url": "URL",
+          "doi": "DOI"
+        }
+      },
       "options": {
         "latex": "LaTeX",
         "biblatex": "BibLaTeX",

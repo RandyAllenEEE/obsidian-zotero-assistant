@@ -45,19 +45,17 @@ function SettingsComponent({
   const { t } = useTranslation();
 
   // Use new hooks for better state management and UI responsiveness
-  const {
-    items: citeFormatState,
-    updateItem: updateCiteState,
-    addItem: addCiteItem,
-    removeItem: removeCiteItem,
-  } = useDebouncedArrayState(settings.citeFormats, updateCiteFormat, 300);
+  const { items: citeFormatState, updateItem: updateCiteState } = useDebouncedArrayState(
+    settings.citeFormats,
+    updateCiteFormat,
+    300
+  );
 
-  const {
-    items: exportFormatState,
-    updateItem: updateExportState,
-    addItem: addExportItem,
-    removeItem: removeExportItem,
-  } = useDebouncedArrayState(settings.exportFormats, updateExportFormat, 300);
+  const { items: exportFormatState, updateItem: updateExportState } = useDebouncedArrayState(
+    settings.exportFormats,
+    updateExportFormat,
+    300
+  );
 
   // Use unified toggle management
   const openNoteAfterImport = useToggleSetting(
@@ -120,16 +118,18 @@ function SettingsComponent({
       name: `Format #${citeFormatState.length + 1}`,
       format: 'formatted-citation' as const,
     };
-    addCiteItem(newFormat);
     addCiteFormat(newFormat);
-  }, [addCiteFormat, addCiteItem, citeFormatState.length]);
+    // Update UI state immediately
+    React.startTransition(() => {
+      // This will be handled by the useState effect
+    });
+  }, [addCiteFormat, citeFormatState.length]);
 
   const removeCite = React.useCallback(
     (index: number) => {
-      removeCiteItem(index);
       removeCiteFormat(index);
     },
-    [removeCiteFormat, removeCiteItem]
+    [removeCiteFormat]
   );
 
   // Improved export format update - immediate UI update, debounced persistence
@@ -141,22 +141,19 @@ function SettingsComponent({
   );
 
   const addExport = React.useCallback(() => {
-    const newFormat = {
+    addExportFormat({
       name: `Import #${exportFormatState.length + 1}`,
       outputPathTemplate: '{{citekey}}/',
       imageOutputPathTemplate: '{{citekey}}/',
       imageBaseNameTemplate: 'image',
-    };
-    addExportItem(newFormat);
-    addExportFormat(newFormat);
-  }, [addExportFormat, addExportItem, exportFormatState.length]);
+    });
+  }, [addExportFormat, exportFormatState.length]);
 
   const removeExport = React.useCallback(
     (index: number) => {
-      removeExportItem(index);
       removeExportFormat(index);
     },
-    [removeExportFormat, removeExportItem]
+    [removeExportFormat]
   );
 
   const tessPathRef = React.useRef<HTMLInputElement>(null);

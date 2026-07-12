@@ -13,7 +13,7 @@ A powerful integration plugin that seamlessly connects Zotero with Obsidian, all
 
 ### Advanced Features
 - **AI-Powered Summaries**: Automatic PDF summarization using AI models (compatible with OpenAI API)
-- **Linkable Citations**: Clickable citations that open corresponding Zotero entries
+- **Linkable Citations**: Clickable citations that can link to Zotero items, URLs, or DOI pages
 - **Library Note Updates**: Update existing notes from Zotero based on citekeys in frontmatter
 - **Image Extraction**: Extract rectangle annotations from PDFs as images
 - **OCR Support**: Optional OCR processing for extracted images
@@ -67,6 +67,9 @@ Create custom citation formats in the settings:
 2. Provide a name for the format
 3. Select output format (LaTeX, BibLaTeX, Pandoc, etc.)
 4. Choose bibliography style (CSL)
+5. For formatted citations, choose an optional citation link target: Zotero item, URL, or DOI
+
+When a formatted citation link target is enabled, the plugin uses Zotero item data returned by Better BibTeX. If the selected item does not provide the requested link target, the citation is inserted without a link and a notice is shown. Multi-item citations are also inserted without a link to avoid linking the whole citation to a single item.
 
 ### Export Formats
 

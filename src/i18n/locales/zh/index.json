@@ -54,6 +54,15 @@
       "command": "命令",
       "brackets": "使用方括号",
       "deleteButton": "删除",
+      "linkType": {
+        "label": "引用链接",
+        "options": {
+          "none": "无链接",
+          "zoteroItem": "Zotero条目",
+          "url": "URL",
+          "doi": "DOI"
+        }
+      },
       "options": {
         "latex": "LaTeX",
         "biblatex": "BibLaTeX",

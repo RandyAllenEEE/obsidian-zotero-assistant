@@ -2,6 +2,13 @@ import { Notice, request } from 'obsidian';
 
 import { getCurrentWindow } from '../helpers';
 import { CitationFormat, DatabaseWithPort } from '../types';
+import {
+  formatCitationMarkdownLink,
+  getCitationLinkFallbackNotice,
+  getCitationLinkType,
+  parseCaywItems,
+  resolveCitationLinkTarget,
+} from './citationLinks';
 import { LoadingModal } from './LoadingModal';
 import { defaultHeaders, getPort } from './helpers';
 import { getBibFromCiteKeys } from './jsonRPC';
@@ -108,15 +115,15 @@ export async function getCAYW(
 
   const qid = Symbol();
   try {
+    const citationLinkType = getCitationLinkType(format);
+
     if (format.format === 'formatted-bibliography') {
       modal.close();
       const citeKeys = await getCiteKeys(database);
       return await getBibFromCiteKeys(citeKeys, database, format.cslStyle);
     }
 
-    if (format.format === 'formatted-citation' && format.addZoteroLink) {
-      // Step 1: Get JSON and Select items (Interactive)
-      console.log('Zotero Link: Starting Double Call strategy. Format:', format);
+    if (format.format === 'formatted-citation' && citationLinkType !== 'none') {
       await ZQueue.wait(qid);
 
       const jsonRes = await requestWithBlur(`http://127.0.0.1:${getPort(
@@ -124,69 +131,51 @@ export async function getCAYW(
         database.port
       )}/better-bibtex/cayw?format=json&select=true`);
 
-      let citeKey = '';
+      let items: any[] = [];
       try {
-        const items = JSON.parse(jsonRes);
-        console.log('Zotero Link: JSON Response receive', items);
-        if (Array.isArray(items) && items.length > 0) {
-          const item = items[0];
-          // Try to get the classic 8-char Zotero Item Key first (required for zotero://select links)
-          // It's often nested in 'item.itemKey' or just 'itemKey' or can be parsed from 'uri'
-          if (item.item?.itemKey) {
-            citeKey = item.item.itemKey;
-          } else if (item.itemKey) {
-            citeKey = item.itemKey;
-          } else {
-            // Fallback: Try to use the standard helper (though this usually returns BBT key)
-            const firstItem = getCiteKeyFromAny(item);
-            if (firstItem) {
-              citeKey = firstItem.key;
-            }
-          }
-        }
+        items = parseCaywItems(jsonRes);
       } catch (e) {
         console.error('Failed to parse CAYW JSON response', e);
       }
 
-      if (!citeKey) {
-        console.warn('Zotero Link: No citekey found, aborting link generation.');
-        modal.close();
-        ZQueue.end(qid);
-        return null;
-      }
-
-      // Step 2: Get Formatted Citation for SELECTED items (Background/Silent)
-      // Note: We use 'selected=true' to use the selection established by the previous call
       const params = new URLSearchParams();
       params.append('format', 'formatted-citation');
       params.append('selected', 'true');
       if (format.cslStyle) {
         params.append('style', format.cslStyle);
-      } else {
-        console.warn('Zotero Link: format.cslStyle is missing! Zotero will use default style.');
       }
 
-      const url2 = `http://127.0.0.1:${getPort(
+      const citationUrl = `http://127.0.0.1:${getPort(
         database.database,
         database.port
       )}/better-bibtex/cayw?${params.toString()}`;
 
-      console.log('Zotero Link: Requesting citation text:', url2);
-
       const citationRes = await request({
         method: 'GET',
-        url: url2,
+        url: citationUrl,
         headers: defaultHeaders,
       });
-
-      console.log('Zotero Link: Citation text received:', citationRes);
 
       win.show();
       modal.close();
       ZQueue.end(qid);
 
       if (citationRes) {
-        return `[${citationRes}](zotero://select/library/items/${citeKey})`;
+        const linkResolution = resolveCitationLinkTarget(
+          items,
+          citationLinkType
+        );
+
+        if (linkResolution.target) {
+          return formatCitationMarkdownLink(citationRes, linkResolution.target);
+        }
+
+        const notice = getCitationLinkFallbackNotice(linkResolution);
+        if (notice) {
+          new Notice(notice, 7000);
+        }
+
+        return citationRes;
       }
       return null;
     }

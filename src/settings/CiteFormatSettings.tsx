@@ -3,7 +3,8 @@ import { SingleValue } from 'react-select';
 import AsyncSelect from 'react-select/async';
 import { useTranslation } from 'react-i18next';
 
-import { CitationFormat, Format } from '../types';
+import { getCitationLinkType } from '../bbt/citationLinks';
+import type { CitationFormat, CitationLinkType, Format } from '../types';
 import { Icon } from './Icon';
 import { cslListRaw } from './cslList';
 import {
@@ -71,6 +72,11 @@ export function CiteFormatSettings({
         delete newFormat.brackets;
       }
 
+      if (newFormat.format !== 'formatted-citation') {
+        delete newFormat.addZoteroLink;
+        delete newFormat.citationLinkType;
+      }
+
       updateFormat(index, newFormat);
     },
     [updateFormat, index, format]
@@ -112,6 +118,21 @@ export function CiteFormatSettings({
       brackets: !format.brackets,
     });
   }, [updateFormat, index, format]);
+
+  const onChangeCitationLinkType = React.useCallback(
+    (e: ChangeEvent) => {
+      const newFormat = {
+        ...format,
+        citationLinkType: (e.target as HTMLSelectElement)
+          .value as CitationLinkType,
+      };
+
+      delete newFormat.addZoteroLink;
+
+      updateFormat(index, newFormat);
+    },
+    [updateFormat, index, format]
+  );
 
   const onRemove = React.useCallback(() => {
     removeFormat(index);
@@ -224,18 +245,28 @@ export function CiteFormatSettings({
 
       {format.format === 'formatted-citation' && (
         <div className="zt-format__form">
-          <div className="zt-format__label">Include Zotero Link</div>
+          <div className="zt-format__label">
+            {t('settings.citation.linkType.label')}
+          </div>
           <div className="zt-format__input-wrapper">
-            <div
-              onClick={() => {
-                updateFormat(index, {
-                  ...format,
-                  addZoteroLink: !format.addZoteroLink,
-                });
-              }}
-              className={`checkbox-container${format.addZoteroLink ? ' is-enabled' : ''
-                }`}
-            />
+            <select
+              className="dropdown"
+              value={getCitationLinkType(format)}
+              onChange={onChangeCitationLinkType}
+            >
+              <option value="none">
+                {t('settings.citation.linkType.options.none')}
+              </option>
+              <option value="zotero-item">
+                {t('settings.citation.linkType.options.zoteroItem')}
+              </option>
+              <option value="url">
+                {t('settings.citation.linkType.options.url')}
+              </option>
+              <option value="doi">
+                {t('settings.citation.linkType.options.doi')}
+              </option>
+            </select>
           </div>
         </div>
       )}
