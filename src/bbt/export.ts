@@ -4,6 +4,11 @@ import path from 'path';
 
 import { doesEXEExist, getVaultRoot } from '../helpers';
 import {
+  getFirstPdfAttachment,
+  localPathToFileUri,
+} from '../fileLinks';
+import { isFirstImport as determineIsFirstImport } from '../frontmatter';
+import {
   DatabaseWithPort,
   ExportToMarkdownParams,
   RenderCiteTemplateParams,
@@ -665,19 +670,14 @@ export async function exportToMarkdown(
         ? getLastExport(existingMarkdown)
         : moment(0);
 
-      // Determine if this is a first import (no previous latest_import_time in frontmatter)
-      let isFirstImport = !existingMarkdownFile;
-      if (existingMarkdownFile) {
-        const oldFrontmatter = (existingMarkdownFile as any).frontmatter ?? {};
-        isFirstImport = !oldFrontmatter['latest_import_time'];
-      }
+      const isFirstImport = determineIsFirstImport(app, existingMarkdownFile);
 
       // Extract PDF URL from the first PDF attachment
-      const pdfAttachment = (item.attachments as any[])
-        .find(a => a.path?.endsWith('.pdf'));
-      const pdfUrl = pdfAttachment
-        ? 'file://' + pdfAttachment.path.replace(/^\//, '').replace(/ /g, '%20')
-        : null;
+      const pdfAttachment = getFirstPdfAttachment(item.attachments);
+      const pdfUrl =
+        typeof pdfAttachment?.path === 'string'
+          ? localPathToFileUri(pdfAttachment.path)
+          : null;
 
       toRender.set(markdownPath, {
         item,
@@ -840,34 +840,28 @@ export async function exportToMarkdown(
 
       if (!rendered) continue;
 
+      let targetFile: TFile;
       if (file) {
         await app.vault.modify(file, rendered);
+        targetFile = file;
       } else {
         await mkMDDir(markdownPath);
-        await app.vault.create(markdownPath, rendered);
+        targetFile = await app.vault.create(markdownPath, rendered);
       }
 
       createdOrUpdatedMarkdownFiles.push(markdownPath);
 
       // Write plugin-managed frontmatter fields (citekey, latest_import_time, zotero_pdf)
       // processFrontMatter will overwrite existing values for the same key (no duplicates in YAML)
-      if (file || (await app.vault.adapter.exists(markdownPath))) {
-        const targetFile = file || (app.vault.getAbstractFileByPath(markdownPath) as TFile);
-        if (targetFile instanceof TFile) {
-          await app.fileManager.processFrontMatter(targetFile, (frontmatter) => {
-            frontmatter['citekey'] = item.citekey;
-            frontmatter['latest_import_time'] = moment().toISOString(true);
-            frontmatter['zotero_pdf'] = pdfUrl;
-          });
-        }
-      }
+      await app.fileManager.processFrontMatter(targetFile, (frontmatter) => {
+        frontmatter['citekey'] = item.citekey;
+        frontmatter['latest_import_time'] = moment().toISOString(true);
+        frontmatter['zotero_pdf'] = pdfUrl;
+      });
 
       // Auto-trigger AI summary for first-import files when setting is enabled
       if (isFirstImport && params.settings.autoSummarize) {
-        const targetFile = file || (app.vault.getAbstractFileByPath(markdownPath) as TFile);
-        if (targetFile instanceof TFile) {
-          summarizePdf(app, targetFile, params.settings);
-        }
+        void summarizePdf(app, targetFile, params.settings, pdfUrl);
       }
     } catch (e) {
       new Notice(

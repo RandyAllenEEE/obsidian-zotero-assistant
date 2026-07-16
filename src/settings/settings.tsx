@@ -11,6 +11,7 @@ import {
   ExportFormat,
   ZoteroConnectorSettings,
 } from '../types';
+import { resolveUpdateLibraryNoteFormat } from '../updateLibraryNote';
 import { AssetDownloader } from './AssetDownloader';
 import { CiteFormatSettings } from './CiteFormatSettings';
 import { ExportFormatSettings } from './ExportFormatSettings';
@@ -101,6 +102,24 @@ function SettingsComponent({
     (index: number, format: ExportFormat) => {
       updateSetting('importHereFormat', format);
       setImportHereFormatState(format);
+    },
+    [updateSetting]
+  );
+
+  const [updateLibraryNoteFormatState, setUpdateLibraryNoteFormatState] =
+    React.useState(
+      resolveUpdateLibraryNoteFormat(settings) || {
+        name: 'Update Item Note',
+        outputPathTemplate: '{{citekey}}.md',
+        imageOutputPathTemplate: '',
+        imageBaseNameTemplate: '',
+      }
+    );
+
+  const updateLibraryNote = React.useCallback(
+    (index: number, format: ExportFormat) => {
+      updateSetting('updateLibraryNoteFormat', format);
+      setUpdateLibraryNoteFormatState(format);
     },
     [updateSetting]
   );
@@ -445,6 +464,26 @@ function SettingsComponent({
             index={-1}
             updateFormat={updateImportHere}
             removeFormat={() => { }}
+            canRemove={false}
+          />
+        </SettingGroup>
+
+        <SettingItem
+          name={t('settings.import.updateItemNoteSettings')}
+          description={t('settings.import.updateItemNoteDescription')}
+          isHeading
+          style={{ marginTop: '16px' }}
+        />
+
+        <SettingGroup level={2}>
+          <ExportFormatSettings
+            format={updateLibraryNoteFormatState}
+            index={-1}
+            updateFormat={updateLibraryNote}
+            removeFormat={() => { }}
+            canRemove={false}
+            showName={false}
+            showOutputPath={false}
           />
         </SettingGroup>
 

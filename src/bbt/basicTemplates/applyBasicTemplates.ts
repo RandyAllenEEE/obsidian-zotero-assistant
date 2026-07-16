@@ -1,5 +1,11 @@
 import { moment } from 'obsidian';
 
+import {
+  FileAttachment,
+  formatAttachmentFileLink,
+  formatAttachmentZoteroLink,
+  getFirstPdfAttachment,
+} from '../../fileLinks';
 import { renderTemplate } from '../template.env';
 
 const creatorTemplate = `
@@ -12,42 +18,6 @@ const creatorTemplate = `
     {%- endif -%}
     {% if not loop.last %}, {% endif %}
   {%- endfor -%}
-{%- endif -%}
-`;
-
-const pdfLinkTemplate = `
-{%- if attachments and attachments.length > 0 -%}
-{%- set file = attachments | filterby("path", "endswith", ".pdf") | first -%}
-{%- if file and file.path and file.path.endsWith(".pdf") -%}
-	[{{file.title}}](file://{{file.path | replace(" ", "%20")}})
-{%- endif -%}
-{%- endif -%}
-`;
-
-const pdfZoteroLinkTemplate = `
-{%- if attachments and attachments.length > 0 -%}
-{%- set file = attachments | filterby("path", "endswith", ".pdf") | first -%}
-{%- if file and file.path and file.path.endsWith(".pdf") -%}
-	[{{file.title}}]({{file.desktopURI}})
-{%- endif -%}
-{%- endif -%}
-`;
-
-const attachmentLinkTemplate = `
-{%- if attachments and attachments.length > 0 -%}
-{%- set file = attachments | first -%}
-{%- if file and file.path -%}
-	[{{file.title}}](file://{{file.path | replace(" ", "%20")}})
-{%- endif -%}
-{%- endif -%}
-`;
-
-const attachmentZoteroLinkTemplate = `
-{%- if attachments and attachments.length > 0 -%}
-{%- set file = attachments | first -%}
-{%- if file and file.path -%}
-	[{{file.title}}]({{file.desktopURI}})
-{%- endif -%}
 {%- endif -%}
 `;
 
@@ -97,25 +67,32 @@ export async function applyBasicTemplates(
     })
   );
 
-  const pdfLink = (
-    await renderTemplate(sourceFile, pdfLinkTemplate, itemData)
-  ).trim();
+  const attachments = Array.isArray(itemData.attachments)
+    ? (itemData.attachments as FileAttachment[])
+    : [];
+  const pdfAttachment = getFirstPdfAttachment(attachments);
+  const firstAttachment = attachments[0];
+
+  const pdfLink = pdfAttachment
+    ? formatAttachmentFileLink(pdfAttachment)
+    : undefined;
   if (pdfLink) itemData.pdfLink = pdfLink;
 
-  const pdfZoteroLink = (
-    await renderTemplate(sourceFile, pdfZoteroLinkTemplate, itemData)
-  ).trim();
+  const pdfZoteroLink = pdfAttachment
+    ? formatAttachmentZoteroLink(pdfAttachment)
+    : undefined;
   if (pdfZoteroLink) itemData.pdfZoteroLink = pdfZoteroLink;
 
-  const attachmentLink = (
-    await renderTemplate(sourceFile, attachmentLinkTemplate, itemData)
-  ).trim();
+  const attachmentLink = firstAttachment
+    ? formatAttachmentFileLink(firstAttachment)
+    : undefined;
   if (attachmentLink) itemData.firstAttachmentLink = attachmentLink;
 
-  const attachmentZoteroLink = (
-    await renderTemplate(sourceFile, attachmentZoteroLinkTemplate, itemData)
-  ).trim();
-  if (attachmentZoteroLink) itemData.firstAttachmentZoteroLink = attachmentZoteroLink;
+  const attachmentZoteroLink = firstAttachment
+    ? formatAttachmentZoteroLink(firstAttachment)
+    : undefined;
+  if (attachmentZoteroLink)
+    itemData.firstAttachmentZoteroLink = attachmentZoteroLink;
 
   if (itemData.notes?.length) {
     const notes = itemData.notes

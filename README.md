@@ -80,6 +80,10 @@ Define custom export formats for note imports:
 3. Define the output path template
 4. Configure the template content
 
+After a successful import, the plugin manages `citekey`, `latest_import_time`, and `zotero_pdf` in the note frontmatter. Templates do not need to declare these fields; if they do, the plugin writes the final values after rendering.
+
+The **Update Item Note** command refreshes the active note in place using its frontmatter `citekey`. A dedicated update format can be configured in settings. For existing configurations without one, the plugin uses the first custom import format and then falls back to the Import Here format.
+
 ## Internationalization
 
 The plugin supports both English and Chinese interfaces. The language will automatically match your Obsidian application language setting.
@@ -91,6 +95,7 @@ The plugin supports both English and Chinese interfaces. The language will autom
 - **Connection Error**: Verify Zotero is running and Better BibTeX is enabled
 - **Empty Results**: Check that Better BibTeX Quick Copy is configured
 - **Citation Not Found**: Ensure citekey exists in your Zotero library
+- **Item Note Cannot Be Updated**: Ensure the note has valid YAML frontmatter and a non-empty `citekey`
 
 ### Getting Help
 

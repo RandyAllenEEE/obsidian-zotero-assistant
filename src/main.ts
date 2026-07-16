@@ -4,6 +4,7 @@ import { shellPath } from 'shell-path';
 
 import i18n, { detectAndSetLanguage } from './i18n/config'; // Initialize i18n and import detection function
 import { DataExplorerView, viewType } from './DataExplorerView';
+import { getFileCitekey } from './frontmatter';
 import { LoadingModal } from './bbt/LoadingModal';
 import { getCAYW } from './bbt/cayw';
 import { exportToMarkdown, renderCiteTemplate } from './bbt/export';
@@ -27,6 +28,7 @@ import {
   ExportFormat,
   ZoteroConnectorSettings,
 } from './types';
+import { resolveUpdateLibraryNoteFormat } from './updateLibraryNote';
 
 // Helper function to get translated strings
 const t = (key: string): string => {
@@ -255,10 +257,7 @@ export default class ZoteroConnector extends Plugin {
           return;
         }
 
-        // Use frontmatter directly if available (runtime field; not on TFile type)
-        const rawCitekey = ((file as unknown as { frontmatter?: Record<string, unknown> }).frontmatter || {})
-          .citekey;
-        const citekey = typeof rawCitekey === 'string' && rawCitekey ? rawCitekey : undefined;
+        const citekey = getFileCitekey(this.app, file);
         if (!citekey) {
           new Notice(t('notices.noCitekeyInFrontmatter'));
           return;
@@ -269,7 +268,7 @@ export default class ZoteroConnector extends Plugin {
           port: this.settings.port,
         };
 
-        const format = this.settings.updateLibraryNoteFormat;
+        const format = resolveUpdateLibraryNoteFormat(this.settings);
 
         if (!format) {
           new Notice(t('notices.updateLibraryNoteNotConfigured'));

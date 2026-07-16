@@ -111,6 +111,8 @@
     "import": {
       "heading": "Import Formats & Import Here",
       "importHereSettings": "Import Here Settings",
+      "updateItemNoteSettings": "Update Item Note Settings",
+      "updateItemNoteDescription": "Controls how the current literature note is refreshed. Until you save a dedicated format, the first custom import format is used, followed by Import Here.",
       "customImportFormats": "Custom Import Formats",
       "addButton": "Add Import Format",
       "name": "Name",
@@ -191,7 +193,7 @@
   },
   "notices": {
     "importHereNotConfigured": "Import Here format is not configured.",
-    "updateLibraryNoteNotConfigured": "Update Library Note format is not configured.",
+    "updateLibraryNoteNotConfigured": "No import format is available for updating item notes.",
     "noActiveFile": "No active file found",
     "noCitekeyInFrontmatter": "No citekey found in frontmatter",
     "pleaseOpenMarkdownFile": "Please open a markdown file to trigger AI Summary",

@@ -111,6 +111,8 @@
     "import": {
       "heading": "导入格式与导入到此处",
       "importHereSettings": "导入到此处设置",
+      "updateItemNoteSettings": "更新条目笔记设置",
+      "updateItemNoteDescription": "用于刷新当前文献笔记。保存独立格式前，依次使用首个自定义导入格式和“导入到此处”格式。",
       "customImportFormats": "自定义导入格式",
       "addButton": "添加导入格式",
       "name": "名称",
@@ -191,7 +193,7 @@
   },
   "notices": {
     "importHereNotConfigured": "“导入到此处”格式未配置。",
-    "updateLibraryNoteNotConfigured": "“更新库笔记”格式未配置。",
+    "updateLibraryNoteNotConfigured": "没有可用于更新条目笔记的导入格式。",
     "noActiveFile": "未找到活动文件",
     "noCitekeyInFrontmatter": "在frontmatter中未找到citekey",
     "pleaseOpenMarkdownFile": "请打开一个笔记文件以触发AI摘要",

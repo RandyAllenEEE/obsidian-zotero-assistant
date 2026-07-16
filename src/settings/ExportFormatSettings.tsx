@@ -20,6 +20,9 @@ interface FormatSettingsProps {
   index: number;
   removeFormat: (index: number) => void;
   updateFormat: (index: number, format: ExportFormat) => void;
+  canRemove?: boolean;
+  showName?: boolean;
+  showOutputPath?: boolean;
 }
 
 export function ExportFormatSettings({
@@ -27,6 +30,9 @@ export function ExportFormatSettings({
   index,
   updateFormat,
   removeFormat,
+  canRemove = true,
+  showName = true,
+  showOutputPath = true,
 }: FormatSettingsProps) {
   const { t } = useTranslation();
 
@@ -92,37 +98,43 @@ export function ExportFormatSettings({
 
   return (
     <div className="zt-format">
-      <div className="zt-format__form">
-        <div className="zt-format__label">{t('settings.import.name')}</div>
-        <div className="zt-format__input-wrapper">
-          <input
-            onChange={onChangeStr}
-            type="text"
-            data-key="name"
-            value={format.name}
-          />
-          <div className="zt-format__delete">
-            <button className="zt-format__delete-btn" onClick={onRemove}>
-              <Icon name="trash" />
-            </button>
+      {showName && (
+        <div className="zt-format__form">
+          <div className="zt-format__label">{t('settings.import.name')}</div>
+          <div className="zt-format__input-wrapper">
+            <input
+              onChange={onChangeStr}
+              type="text"
+              data-key="name"
+              value={format.name}
+            />
+            {canRemove && (
+              <div className="zt-format__delete">
+                <button className="zt-format__delete-btn" onClick={onRemove}>
+                  <Icon name="trash" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="zt-format__form">
-        <div className="zt-format__label">{t('settings.import.outputPath')}</div>
-        <div className="zt-format__input-wrapper">
-          <input
-            onChange={onChangeStr}
-            type="text"
-            data-key="outputPathTemplate"
-            value={format.outputPathTemplate}
-          />
+      {showOutputPath && (
+        <div className="zt-format__form">
+          <div className="zt-format__label">{t('settings.import.outputPath')}</div>
+          <div className="zt-format__input-wrapper">
+            <input
+              onChange={onChangeStr}
+              type="text"
+              data-key="outputPathTemplate"
+              value={format.outputPathTemplate}
+            />
+          </div>
+          <div className="zt-format__input-note">
+            {t('settings.import.outputPathDescription')}
+          </div>
         </div>
-        <div className="zt-format__input-note">
-          {t('settings.import.outputPathDescription')}
-        </div>
-      </div>
+      )}
 
       <div className="zt-format__form">
         <div className="zt-format__label">{t('settings.import.imageOutputPath')}</div>
