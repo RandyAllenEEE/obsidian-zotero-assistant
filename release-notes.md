@@ -1,3 +1,9 @@
+## 4.2.0
+- Linked citations use one Better BibTeX selection and keep locator and citation formatting.
+- URL and DOI metadata can be read from the local Zotero API when missing from the selection.
+- Older Better BibTeX versions fall back to a plain citation with an upgrade notice.
+- Added focused citation compatibility and error handling tests.
+
 ## 4.1.1
 - **AI Summary: Reliable frontmatter-based PDF path resolution** — PDF path is now stored in frontmatter (`zotero_pdf`) by the plugin on every import, replacing the previous regex-based body scan that required a specific template format. Works regardless of user's template configuration.
 - **AI Summary: Auto-trigger on first import only** — AI summary is now triggered automatically only when a note is first imported (when `latest_import_time` frontmatter field is absent). Re-importing or re-opening the same note will not re-trigger, avoiding duplicate API calls.

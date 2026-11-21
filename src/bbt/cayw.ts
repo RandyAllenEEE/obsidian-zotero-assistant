@@ -1,4 +1,4 @@
-import { Notice, request } from 'obsidian';
+import { Notice, request, requestUrl } from 'obsidian';
 
 import { getCurrentWindow } from '../helpers';
 import { CitationFormat, DatabaseWithPort } from '../types';
@@ -6,7 +6,8 @@ import {
   formatCitationMarkdownLink,
   getCitationLinkFallbackNotice,
   getCitationLinkType,
-  parseCaywItems,
+  getZoteroMetadataPath,
+  parseCaywCitationResponse,
   resolveCitationLinkTarget,
 } from './citationLinks';
 import { LoadingModal } from './LoadingModal';
@@ -23,20 +24,23 @@ export function getCiteKeyFromAny(item: any): CiteKey | null {
   };
 }
 
-async function requestWithBlur(url: string) {
+async function requestWithBlur(
+  url: string,
+  jsonBody?: { format: 'formatted-citation'; style?: string }
+) {
   const win = getCurrentWindow();
-  win.blur();
+  win?.blur();
   try {
-    const res = await request({
-      method: 'GET',
+    return await request({
+      method: jsonBody ? 'POST' : 'GET',
       url,
       headers: defaultHeaders,
+      ...(jsonBody
+        ? { contentType: 'application/json', body: JSON.stringify(jsonBody) }
+        : {}),
     });
-    win.show();
-    return res;
-  } catch (e) {
-    win.show();
-    throw e;
+  } finally {
+    win?.show();
   }
 }
 
@@ -126,45 +130,60 @@ export async function getCAYW(
     if (format.format === 'formatted-citation' && citationLinkType !== 'none') {
       await ZQueue.wait(qid);
 
-      const jsonRes = await requestWithBlur(`http://127.0.0.1:${getPort(
-        database.database,
-        database.port
-      )}/better-bibtex/cayw?format=json&select=true`);
-
-      let items: any[] = [];
-      try {
-        items = parseCaywItems(jsonRes);
-      } catch (e) {
-        console.error('Failed to parse CAYW JSON response', e);
-      }
-
-      const params = new URLSearchParams();
-      params.append('format', 'formatted-citation');
-      params.append('selected', 'true');
-      if (format.cslStyle) {
-        params.append('style', format.cslStyle);
-      }
-
-      const citationUrl = `http://127.0.0.1:${getPort(
-        database.database,
-        database.port
-      )}/better-bibtex/cayw?${params.toString()}`;
-
-      const citationRes = await request({
-        method: 'GET',
-        url: citationUrl,
+      const endpoint = `http://127.0.0.1:${getPort(database.database, database.port)}/better-bibtex/cayw`;
+      const probe = await requestUrl({
+        method: 'POST',
+        url: `${endpoint}?probe=true`,
         headers: defaultHeaders,
+        contentType: 'application/json',
+        body: '{}',
+        throw: false,
       });
+      if (probe.status === 400 && probe.text.trim() === 'Endpoint does not support method') {
+        new Notice('This Better BibTeX version cannot add citation links. Inserting a plain citation; update Better BibTeX to enable links.', 10000);
+        const params = new URLSearchParams({ format: 'formatted-citation' });
+        if (format.cslStyle) params.set('style', format.cslStyle);
+        const citation = await requestWithBlur(`${endpoint}?${params.toString()}`);
+        modal.close();
+        ZQueue.end(qid);
+        return citation || null;
+      }
+      if (probe.status !== 200 || probe.text.trim() !== 'ready') {
+        throw new Error('Cannot verify Better BibTeX citation support.');
+      }
 
-      win.show();
+      // Better BibTeX returns the rendered citation and its picked items in
+      // one response. Selecting those items in the Zotero library would
+      // switch away from the current reader and discard picker locators.
+      const raw = await requestWithBlur(
+        endpoint,
+        { format: 'formatted-citation', style: format.cslStyle || undefined }
+      );
+      const { output: citationRes, items } = parseCaywCitationResponse(raw);
       modal.close();
       ZQueue.end(qid);
 
       if (citationRes) {
-        const linkResolution = resolveCitationLinkTarget(
-          items,
-          citationLinkType
-        );
+        let linkResolution = resolveCitationLinkTarget(items, citationLinkType);
+        if (
+          !linkResolution.target &&
+          items.length === 1 &&
+          (citationLinkType === 'url' || citationLinkType === 'doi')
+        ) {
+          const itemPath = getZoteroMetadataPath(items[0]);
+          if (itemPath) {
+            try {
+              const item = JSON.parse(await request({
+                method: 'GET',
+                url: `http://127.0.0.1:${getPort(database.database, database.port)}${itemPath}`,
+                headers: { 'Zotero-API-Version': '3' },
+              }));
+              linkResolution = resolveCitationLinkTarget([item], citationLinkType);
+            } catch {
+              // If the local API is unavailable, keep the formatted citation.
+            }
+          }
+        }
 
         if (linkResolution.target) {
           return formatCitationMarkdownLink(citationRes, linkResolution.target);

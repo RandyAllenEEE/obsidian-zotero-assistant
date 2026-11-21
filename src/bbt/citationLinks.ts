@@ -60,8 +60,8 @@ function toZoteroSelectURI(value: string) {
     return value;
   }
 
-  if (value.startsWith('http://zotero.org/')) {
-    return getLocalURI('select', value);
+  if (/^https?:\/\/zotero\.org\//.test(value)) {
+    return getLocalURI('select', value.replace(/^https:/, 'http:'));
   }
 
   return null;
@@ -75,9 +75,12 @@ export function getZoteroItemLink(item: any) {
   }
 
   const uri = findStringField(item, ['uri']);
-  if (uri) {
-    const selectURI = toZoteroSelectURI(uri);
-    if (selectURI) return selectURI;
+  const pickedUris: unknown[] = Array.isArray(item?.uris) ? item.uris : [];
+  for (const candidate of [uri, ...pickedUris]) {
+    if (typeof candidate === 'string') {
+      const selectURI = toZoteroSelectURI(candidate);
+      if (selectURI) return selectURI;
+    }
   }
 
   const itemKey = findStringField(item, ['itemKey']);
@@ -86,6 +89,20 @@ export function getZoteroItemLink(item: any) {
   }
 
   return null;
+}
+
+// Use only canonical item links as a source of identifiers. The HTTP origin
+// is supplied separately by the caller and is always local.
+export function getZoteroMetadataPath(item: any): string | null {
+  const link = getZoteroItemLink(item);
+  const match = link?.match(
+    /^zotero:\/\/select\/(?:library|groups\/(\d+))\/items\/([A-Z0-9]{8})$/
+  );
+  if (!match) return null;
+  const [, groupId, itemKey] = match;
+  return groupId
+    ? `/api/groups/${groupId}/items/${itemKey}`
+    : `/api/users/0/items/${itemKey}`;
 }
 
 export function getUrlLink(item: any) {
@@ -160,22 +177,20 @@ export function formatCitationMarkdownLink(text: string, target: string) {
   )})`;
 }
 
-export function parseCaywItems(jsonResponse: string): any[] {
-  const parsed = JSON.parse(jsonResponse);
-
-  if (Array.isArray(parsed)) {
-    return parsed;
+export function parseCaywCitationResponse(response: string): {
+  output: string;
+  items: any[];
+} {
+  const parsed = JSON.parse(response);
+  if (typeof parsed?.output !== 'string' || !Array.isArray(parsed.pick)) {
+    throw new Error('Better BibTeX did not return a structured citation response.');
   }
-
-  if (Array.isArray(parsed?.items)) {
-    return parsed.items;
-  }
-
-  if (Array.isArray(parsed?.result)) {
-    return parsed.result;
-  }
-
-  return [];
+  const items = parsed.pick.flatMap((pick: any) =>
+    Array.isArray(pick?.citationItems)
+      ? pick.citationItems.filter((item: any) => item && item.itemData?.type !== 'note')
+      : []
+  );
+  return { output: parsed.output, items };
 }
 
 export function getCitationLinkFallbackNotice(

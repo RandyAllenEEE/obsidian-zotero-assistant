@@ -5,7 +5,7 @@ import {
   getUrlLink,
   getZoteroItemLink,
   normalizeDoiLink,
-  parseCaywItems,
+  parseCaywCitationResponse,
   resolveCitationLinkTarget,
 } from '../citationLinks';
 
@@ -163,13 +163,31 @@ describe('formatCitationMarkdownLink()', () => {
   });
 });
 
-describe('parseCaywItems()', () => {
-  it('accepts array and object-wrapped CAYW JSON responses', () => {
-    expect(parseCaywItems('[{"itemKey":"AAA"}]')).toEqual([
-      { itemKey: 'AAA' },
-    ]);
-    expect(parseCaywItems('{"items":[{"itemKey":"BBB"}]}')).toEqual([
-      { itemKey: 'BBB' },
-    ]);
+describe('parseCaywCitationResponse()', () => {
+  it('uses the rendered text and link data from the same pick', () => {
+    const { output, items } = parseCaywCitationResponse(JSON.stringify({
+      output: '(Author, 2026, p. 42)',
+      pick: [{ citationItems: [{
+        locator: '42',
+        uris: ['http://zotero.org/groups/456/items/HYEQSLC8'],
+        itemData: { DOI: '10.1000/example' },
+      }] }],
+    }));
+    expect(output).toBe('(Author, 2026, p. 42)');
+    expect(resolveCitationLinkTarget(items, 'zotero-item').target)
+      .toBe('zotero://select/groups/456/items/HYEQSLC8');
+    expect(resolveCitationLinkTarget(items, 'doi').target)
+      .toBe('https://doi.org/10.1000/example');
+  });
+
+  it('treats a cancelled picker as empty and keeps multi-item fallback', () => {
+    expect(parseCaywCitationResponse('{"output":"","pick":[]}'))
+      .toEqual({ output: '', items: [] });
+    const { items } = parseCaywCitationResponse(JSON.stringify({
+      output: '(A, 2026; B, 2025)',
+      pick: [{ citationItems: [{ id: 1 }, { id: 2 }] }],
+    }));
+    expect(resolveCitationLinkTarget(items, 'zotero-item').reason)
+      .toBe('multi-select');
   });
 });
