@@ -1,6 +1,6 @@
 {
   "name": "obsidian-zotero-assistant",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "description": "Import Zotero references, notes, and PDF annotations in Obsidian.",
   "main": "main.js",
   "scripts": {

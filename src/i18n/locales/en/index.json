@@ -163,11 +163,14 @@
     },
     "pdf": {
       "heading": "PDF Utility",
-      "description": "Extracting data from PDFs requires an external tool. This plugin will still work without it, but annotations will not be included in exports.",
+      "description": "This tool is required to export PDF annotations.",
       "upToDate": "PDF utility is up to date.",
+      "needsUpdate": "Update required. Download the PDF utility again.",
       "pathOverride": {
         "label": "PDF Utility Path Override",
-        "description": "Override the path to the PDF utility. Specify an absolute path to the pdfannots2json executable."
+        "description": "Enter the absolute path to pdfannots2json and give Obsidian permission to run it.",
+        "download": "Download the executable",
+        "browse": "Select the pdfannots2json executable"
       }
     },
     "buttons": {

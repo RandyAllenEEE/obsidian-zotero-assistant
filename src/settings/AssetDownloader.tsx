@@ -96,14 +96,13 @@ export function AssetDownloader(props: {
     <>
       {t('settings.pdf.pathOverride.description')}{' '}
       <a
+        className="zt-pdf-download-link"
         href="https://github.com/mgmeyers/pdfannots2json/releases"
         target="_blank"
         rel="noreferrer"
       >
-        Download the executable here.
-      </a>{' '}
-      You may need to provide Obsidian the appropriate OS permissions to access
-      the executable.
+        {t('settings.pdf.pathOverride.download')}
+      </a>
     </>
   );
 
@@ -120,7 +119,7 @@ export function AssetDownloader(props: {
       />
       <div
         className="clickable-icon setting-editor-extra-setting-button"
-        aria-label="Select the pdfannots2json executable"
+        aria-label={t('settings.pdf.pathOverride.browse')}
         onClick={() => {
           const path = require('electron').remote.dialog.showOpenDialogSync({
             properties: ['openFile'],
@@ -159,11 +158,8 @@ export function AssetDownloader(props: {
       {desc}{' '}
       {exists && (
         <strong className="mod-warning">
-          The PDF extraction tool requires updating. Please re-download.
+          {t('settings.pdf.needsUpdate')}
         </strong>
-      )}
-      {!exists && !overridePath && (
-        <strong>Click the button to download.</strong>
       )}
     </>
   );

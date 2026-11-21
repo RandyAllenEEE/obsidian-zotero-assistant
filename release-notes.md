@@ -1,3 +1,9 @@
+## 4.2.1
+
+- Make the five existing settings sections individually collapsible.
+- Prevent opening settings from changing saved toggle values.
+- Shorten and localize PDF utility guidance while retaining downloads and the executable picker.
+
 ## 4.2.0
 - Linked citations use one Better BibTeX selection and keep locator and citation formatting.
 - URL and DOI metadata can be read from the local Zotero API when missing from the selection.

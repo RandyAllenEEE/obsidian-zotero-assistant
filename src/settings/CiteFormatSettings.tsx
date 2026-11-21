@@ -1,3 +1,4 @@
+import { NativeToggle } from './NativeToggle';
 import React, { ChangeEvent } from 'react';
 import { SingleValue } from 'react-select';
 import AsyncSelect from 'react-select/async';
@@ -288,11 +289,7 @@ export function CiteFormatSettings({
         <div className="zt-format__form">
           <div className="zt-format__label">Include Brackets</div>
           <div className="zt-format__input-wrapper">
-            <div
-              onClick={onChangeBrackets}
-              className={`checkbox-container${format.brackets ? ' is-enabled' : ''
-                }`}
-            />
+            <NativeToggle label="Include Brackets" value={!!format.brackets} onChange={onChangeBrackets} />
           </div>
         </div>
       )}

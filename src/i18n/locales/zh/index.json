@@ -163,11 +163,14 @@
     },
     "pdf": {
       "heading": "PDF工具",
-      "description": "从PDF提取数据需要外部工具。此插件在没有它的情况下仍可工作，但导出中不包括注释。",
+      "description": "导出 PDF 批注需要此工具。",
       "upToDate": "PDF工具是最新版本。",
+      "needsUpdate": "PDF 工具需要更新，请重新下载。",
       "pathOverride": {
         "label": "PDF工具路径覆盖",
-        "description": "覆盖PDF工具的路径。指定pdfannots2json可执行文件的绝对路径。"
+        "description": "指定 pdfannots2json 的绝对路径，并确保 Obsidian 有执行权限。",
+        "download": "下载可执行文件",
+        "browse": "选择 pdfannots2json 可执行文件"
       }
     },
     "buttons": {
