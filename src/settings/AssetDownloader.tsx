@@ -1,18 +1,11 @@
-import download from 'download';
-import { Notice, debounce } from 'obsidian';
+import { Notice, requestUrl } from 'obsidian';
 import os from 'os';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   checkEXEVersion,
   doesEXEExist,
-  doesLegacyEXEExist,
-  doesLegacyEXEExist2,
-  getExeRoot,
-  removeEXE,
-  removeLegacyEXE,
-  removeLegacyEXE2,
-  scopeExe,
+  getExePath,
 } from 'src/helpers';
 import { ZoteroConnectorSettings } from 'src/types';
 
@@ -20,75 +13,40 @@ import { Icon } from './Icon';
 import { SettingItem } from './SettingItem';
 import { useDebouncedInput } from './useSettings';
 
-export const currentVersion = '1.0.15';
+import { currentVersion, getPdfUtilityAsset, installPdfUtility } from './pdfUtilityInstaller';
+
+export { currentVersion };
 export const internalVersion = 1;
 
-const options: Record<string, Record<string, string>> = {
-  darwin: {
-    x64: `https://github.com/mgmeyers/pdfannots2json/releases/download/${currentVersion}/pdfannots2json.Mac.Intel.tar.gz`,
-    arm64: `https://github.com/mgmeyers/pdfannots2json/releases/download/${currentVersion}/pdfannots2json.Mac.M1.tar.gz`,
-  },
-  linux: {
-    x64: `https://github.com/mgmeyers/pdfannots2json/releases/download/${currentVersion}/pdfannots2json.Linux.x64.tar.gz`,
-  },
-  win32: {
-    x64: `https://github.com/mgmeyers/pdfannots2json/releases/download/${currentVersion}/pdfannots2json.Windows.x64.zip`,
-  },
-};
-
-function getDownloadUrl() {
-  const platform = options[os.platform()];
-
-  if (!platform) return null;
-
-  const url = platform[os.arch()];
-
-  if (!url) return null;
-
-  return url;
-}
-
-export async function downloadAndExtract() {
-  const url = getDownloadUrl();
-
-  console.log('Obsidian Zotero Integration: Downloading ' + url);
-
-  if (!url) return false;
+export async function downloadAndExtract(pdfUtilityDirectory: string) {
+  const asset = getPdfUtilityAsset(os.platform(), os.arch());
+  if (!asset) return false;
 
   try {
-    if (doesLegacyEXEExist2()) {
-      removeLegacyEXE2();
-    }
-
-    if (doesLegacyEXEExist()) {
-      removeLegacyEXE();
-    }
-
-    if (doesEXEExist()) {
-      removeEXE();
-    }
-
-    await download(url, getExeRoot(), {
-      extract: true,
-    });
-
-    scopeExe();
-  } catch (e) {
-    console.error(e);
+    const response = await requestUrl({ url: asset.url });
+    await installPdfUtility(
+      new Uint8Array(response.arrayBuffer),
+      asset,
+      getExePath(pdfUtilityDirectory)
+    );
+    return true;
+  } catch (error) {
+    console.error(error);
     new Notice(
       'Error downloading PDF utility. Check the console for more details.',
       10000
     );
+    return false;
   }
-
-  return true;
 }
 
 export function AssetDownloader(props: {
   settings: ZoteroConnectorSettings;
+  pdfUtilityDirectory: string;
   updateSetting: (key: keyof ZoteroConnectorSettings, value: any) => void;
 }) {
   const { t } = useTranslation();
+  const { pdfUtilityDirectory } = props;
   const [isUpToDate, setIsUpToDate] = React.useState<boolean | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [exists, setExists] = React.useState(false);
@@ -107,22 +65,22 @@ export function AssetDownloader(props: {
   );
 
   React.useEffect(() => {
-    const pathExists = doesEXEExist(overridePath);
+    const pathExists = doesEXEExist(pdfUtilityDirectory, overridePath);
     setExists(pathExists);
 
     if (pathExists) {
-      checkEXEVersion(overridePath)
+      checkEXEVersion(pdfUtilityDirectory, overridePath)
         .then((version) => {
           setIsUpToDate(`v${currentVersion}` === version);
         })
         .catch(() => {});
     }
-  }, [overridePath]);
+  }, [overridePath, pdfUtilityDirectory]);
 
   const handleDownload = React.useCallback(() => {
     setIsLoading(true);
 
-    downloadAndExtract().then((success) => {
+    downloadAndExtract(pdfUtilityDirectory).then((success) => {
       setIsLoading(false);
 
       if (success) {
@@ -130,7 +88,7 @@ export function AssetDownloader(props: {
         setExists(true);
       }
     });
-  }, []);
+  }, [pdfUtilityDirectory]);
 
   const desc = t('settings.pdf.description');
 

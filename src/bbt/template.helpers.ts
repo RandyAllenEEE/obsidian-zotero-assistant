@@ -49,20 +49,8 @@ export async function getTemplates(params: ExportToMarkdownParams) {
 }
 
 export function getLastExport(md: string): moment.Moment {
-  let match = md.match(/%% Import Date: (\S+) %%\n$/);
-
-  if (match && match[1]) {
-    return moment(match[1]);
-  }
-
-  // Legacy
-  match = md.match(/%% Export Date: (\S+) %%\n$/);
-
-  if (match && match[1]) {
-    return moment(match[1]);
-  }
-
-  return moment(0);
+  const match = md.trimEnd().match(/(?:^|\r?\n)%% (?:Import|Export) Date: ([^\r\n]+) %%$/);
+  return match ? moment(match[1], moment.ISO_8601, true) : moment.invalid();
 }
 
 export function appendExportDate(md: string): string {

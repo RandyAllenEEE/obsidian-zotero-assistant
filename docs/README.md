@@ -1,4 +1,4 @@
-## Obsidian Zotero Integration Documentation
+## Obsidian Zotero Assistant Documentation
 
 - [FAQ](FAQ.md)
 - [PDF Annotations](PDF%20Annotations.md)

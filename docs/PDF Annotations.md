@@ -1,6 +1,11 @@
 ## What is the PDF Utility?
 
-Obsidian Zotero Integration uses an [external tool](https://github.com/mgmeyers/pdf-annots2json) to extract annotations from PDF files. This tool is not 100% perfect, but generally works well.
+The built-in download checks the SHA-256 of the pinned upstream release for
+your platform before extracting its executable. Failed downloads and failed
+checks leave an existing installation available. You can still select a local
+executable in the plugin settings.
+
+Obsidian Zotero Assistant uses an [external tool](https://github.com/mgmeyers/pdf-annots2json) to extract annotations from PDF files. This tool is not 100% perfect, but generally works well.
 
 Currently, the extraction tool supports:
 - Windows (x64)

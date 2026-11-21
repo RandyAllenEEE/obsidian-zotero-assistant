@@ -197,7 +197,7 @@
     "noActiveFile": "未找到活动文件",
     "noCitekeyInFrontmatter": "在frontmatter中未找到citekey",
     "pleaseOpenMarkdownFile": "请打开一个笔记文件以触发AI摘要",
-    "updatingPdfUtility": "正在更新Obsidian Zotero Integration PDF工具...",
+    "updatingPdfUtility": "正在更新Zotero Assistant PDF工具...",
     "couldNotFindLibrary": "找不到citekey为{{citekey}}的库",
     "updatedNote": "已更新{{filename}}",
     "failedToUpdateNote": "更新笔记失败：{{error}}"

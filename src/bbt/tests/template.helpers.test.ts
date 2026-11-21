@@ -34,12 +34,20 @@ describe('getLastExport', () => {
     expect(result.format('YYYY-MM-DD')).toBe('2024-06-15');
   });
 
-  it('parses Import Date with space-separated time (ISO date-only part is captured)', () => {
-    // \S+ captures '2024-06-15' (up to first whitespace), moment('2024-06-15') is valid
+  it('parses an Import Date with a space-separated time', () => {
     const md = 'Some content\n\n%% Import Date: 2024-06-15 10:30:00 %%\n';
     const result = getLastExport(md);
     expect(result.isValid()).toBe(true);
     expect(result.format('YYYY-MM-DD')).toBe('2024-06-15');
+  });
+
+  it('preserves the time of a footer on CRLF input', () => {
+    const result = getLastExport('note\r\n%% Import Date: 2024-06-15 10:30:00 %%\r\n');
+    expect(result.format('HH:mm:ss')).toBe('10:30:00');
+  });
+
+  it('rejects a malformed timestamp', () => {
+    expect(getLastExport('%% Import Date: 2024-99-99 %%\n').isValid()).toBe(false);
   });
 
   it('parses legacy Export Date format', () => {

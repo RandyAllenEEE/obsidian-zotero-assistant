@@ -5,6 +5,7 @@ import { shellPath } from 'shell-path';
 import i18n, { detectAndSetLanguage } from './i18n/config'; // Initialize i18n and import detection function
 import { DataExplorerView, viewType } from './DataExplorerView';
 import { getFileCitekey } from './frontmatter';
+import { getExeRoot } from './helpers';
 import { LoadingModal } from './bbt/LoadingModal';
 import { getCAYW } from './bbt/cayw';
 import { exportToMarkdown, renderCiteTemplate } from './bbt/export';
@@ -35,7 +36,6 @@ const t = (key: string): string => {
   return i18n.t(key);
 };
 
-const commandPrefix = 'obsidian-zotero-desktop-connector:';
 const citationCommandIDPrefix = 'zdc-';
 const exportCommandIDPrefix = 'zdc-exp-';
 const DEFAULT_SETTINGS: ZoteroConnectorSettings = {
@@ -144,6 +144,10 @@ export default class ZoteroConnector extends Plugin {
   emitter: Events;
   fuse: Fuse<CiteKeyExport>;
 
+  get pdfUtilityDirectory() {
+    return getExeRoot(this.app.vault, this.manifest);
+  }
+
   async onload() {
     await this.loadSettings();
     this.emitter = new Events();
@@ -235,7 +239,7 @@ export default class ZoteroConnector extends Plugin {
           settings: this.settings,
           database,
           exportFormat: localFormat,
-        }).then((notes) => this.openNotes(notes));
+        }, this.pdfUtilityDirectory).then((notes) => this.openNotes(notes));
       },
     });
 
@@ -293,6 +297,7 @@ export default class ZoteroConnector extends Plugin {
               database,
               exportFormat: localFormat,
             },
+            this.pdfUtilityDirectory,
             [{ key: citekey, library: library }]
           );
 
@@ -375,7 +380,7 @@ export default class ZoteroConnector extends Plugin {
 
   removeFormatCommand(format: CitationFormat) {
     (this.app as any).commands.removeCommand(
-      `${commandPrefix}${citationCommandIDPrefix}${format.name}`
+      `${this.manifest.id}:${citationCommandIDPrefix}${format.name}`
     );
   }
 
@@ -393,7 +398,7 @@ export default class ZoteroConnector extends Plugin {
             settings: this.settings,
             database,
             exportFormat: format,
-          })
+          }, this.pdfUtilityDirectory)
         );
       },
     });
@@ -401,7 +406,7 @@ export default class ZoteroConnector extends Plugin {
 
   removeExportCommand(format: ExportFormat) {
     (this.app as any).commands.removeCommand(
-      `${commandPrefix}${exportCommandIDPrefix}${format.name}`
+      `${this.manifest.id}:${exportCommandIDPrefix}${format.name}`
     );
   }
 
@@ -425,6 +430,7 @@ export default class ZoteroConnector extends Plugin {
         database,
         exportFormat: format,
       },
+      this.pdfUtilityDirectory,
       [{ key: citekey, library }]
     );
   }
@@ -517,7 +523,7 @@ export default class ZoteroConnector extends Plugin {
       modal.open();
 
       try {
-        const success = await downloadAndExtract();
+        const success = await downloadAndExtract(this.pdfUtilityDirectory);
 
         if (success) {
           this.settings.exeVersion = currentVersion;

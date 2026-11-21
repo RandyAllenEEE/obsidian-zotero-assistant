@@ -1,7 +1,7 @@
 import { execa } from 'execa';
 import { Notice } from 'obsidian';
 import path from 'path';
-import { ensureExecutableSync, getExeName, getExeRoot } from 'src/helpers';
+import { ensureExecutableSync } from 'src/helpers';
 
 import { LoadingModal } from './LoadingModal';
 
@@ -36,7 +36,7 @@ const paramMap: Record<keyof ExtractParams, string> = {
 export async function extractAnnotations(
   input: string,
   params: ExtractParams,
-  overridePath?: string
+  executablePath: string
 ) {
   const modal = new LoadingModal(app, 'Extracting annotations...');
   modal.open();
@@ -65,17 +65,14 @@ export async function extractAnnotations(
   });
 
   try {
-    const isExecutable = ensureExecutableSync(overridePath);
+    const isExecutable = ensureExecutableSync(executablePath);
 
     if (!isExecutable) {
       new Notice(`Error: PDF utility is not executable`, 10000);
       return '[]';
     }
 
-    const result = await execa(
-      overridePath || path.join(getExeRoot(), getExeName()),
-      args
-    );
+    const result = await execa(executablePath, args);
 
     modal.close();
 

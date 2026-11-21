@@ -157,7 +157,7 @@ function DataExporer({ plugin }: { plugin: ZoteroConnector }) {
   >(null);
 
   const promptForSelection = React.useCallback(() => {
-    dataExplorerPrompt(plugin.settings).then((res) => {
+    dataExplorerPrompt(plugin.settings, plugin.pdfUtilityDirectory).then((res) => {
       if (!res || res.length === 0) {
         setError('No data retrieved');
       } else {

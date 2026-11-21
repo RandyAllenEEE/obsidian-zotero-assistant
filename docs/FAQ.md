@@ -36,7 +36,7 @@ Importing via "Insert notes into your current document" will loose you the annot
 
 ## My import doesn't see any annotations / doesn't import any images
 
-There might be a bug in Bibtex or the Zotero Integration plugin. Zotero has the annotation but its not seen in Obsidian. Please reference https://github.com/mgmeyers/obsidian-zotero-integration/issues/107
+There might be a bug in Bibtex or the Zotero Assistant plugin. Zotero has the annotation but its not seen in Obsidian. Please reference https://github.com/mgmeyers/obsidian-zotero-integration/issues/107
 
 You can export the PDF annotation in Zotero directly into a note. Downside is that you will loose images, links of the location and coloring of the note.
 

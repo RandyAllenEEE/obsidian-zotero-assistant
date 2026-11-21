@@ -197,7 +197,7 @@
     "noActiveFile": "No active file found",
     "noCitekeyInFrontmatter": "No citekey found in frontmatter",
     "pleaseOpenMarkdownFile": "Please open a markdown file to trigger AI Summary",
-    "updatingPdfUtility": "Updating Obsidian Zotero Integration PDF Utility...",
+    "updatingPdfUtility": "Updating Zotero Assistant PDF Utility...",
     "couldNotFindLibrary": "Could not find library for citekey: {{citekey}}",
     "updatedNote": "Updated {{filename}}",
     "failedToUpdateNote": "Failed to update note: {{error}}"

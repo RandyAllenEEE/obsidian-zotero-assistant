@@ -6,12 +6,17 @@ import path from 'path';
 
 const prod = process.argv[2] === 'production';
 const buildDir = 'build';
+const licenseNotices = ['LICENSE.md', 'PDF_UTILITY_NOTICES.txt']
+  .map((file) => fs.readFileSync(file, 'utf8'))
+  .join('\n\n')
+  .replaceAll('*/', '* /');
 
 if (!fs.existsSync(buildDir)) {
   fs.mkdirSync(buildDir);
 }
 
 const context = await esbuild.context({
+  banner: { js: '/*\n' + licenseNotices + '\n*/' },
   entryPoints: ['./src/main.ts'],
   bundle: true,
   external: [

@@ -1,9 +1,140 @@
 /**
- * Tests for useSettings hooks (useToggleSetting, useDebouncedState, useDebouncedInput)
- * We test the logic independently without React by replicating the hook logic.
+ * @jest-environment jsdom
+ * @jest-environment-options {"customExportConditions":["node","node-addons"]}
  */
 
-import { ZoteroConnectorSettings } from '../types';
+import { h, render } from 'preact';
+import { act } from 'preact/test-utils';
+import { useDebouncedState, useToggleSetting } from './useSettings';
+import type { ZoteroConnectorSettings } from '../types';
+
+jest.mock('obsidian', () => ({
+  debounce(callback: (value: unknown) => void, delay: number, resetTimer: boolean) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let latest: unknown;
+    return (value: unknown) => {
+      latest = value;
+      if (timer !== undefined) {
+        if (!resetTimer) return;
+        clearTimeout(timer);
+      }
+      timer = setTimeout(() => {
+        timer = undefined;
+        callback(latest);
+      }, delay);
+    };
+  },
+}), { virtual: true });
+
+let container: HTMLDivElement;
+
+beforeEach(() => {
+  jest.useFakeTimers();
+  container = document.createElement('div');
+});
+
+afterEach(() => {
+  act(() => render(null, container));
+  jest.useRealTimers();
+});
+
+function mountHook<T>(hook: () => T): () => T {
+  let result: T;
+  function Probe() {
+    result = hook();
+    return null;
+  }
+
+  act(() => render(h(Probe, {}), container));
+  return () => result;
+}
+
+describe('useToggleSetting', () => {
+  it('initializes from the saved value', () => {
+    const state = mountHook(() => useToggleSetting('autoSummarize', jest.fn(), false));
+    expect(state().isEnabled).toBe(false);
+  });
+
+  it.each([false, true])('persists the new value from %s', (initial) => {
+    const update = jest.fn();
+    const state = mountHook(() => useToggleSetting('autoSummarize', update, initial));
+    act(() => state().toggle());
+    expect(state().isEnabled).toBe(!initial);
+    expect(update).toHaveBeenCalledWith('autoSummarize', !initial);
+  });
+
+  it('accumulates rapid toggles against the latest state', () => {
+    const update = jest.fn();
+    const state = mountHook(() => useToggleSetting('openNoteAfterImport', update, false));
+    act(() => {
+      state().toggle();
+      state().toggle();
+      state().toggle();
+    });
+    expect(state().isEnabled).toBe(true);
+    expect(update.mock.calls).toEqual([
+      ['openNoteAfterImport', true],
+      ['openNoteAfterImport', false],
+      ['openNoteAfterImport', true],
+    ]);
+  });
+});
+
+describe('useDebouncedState', () => {
+  it('initializes with the saved value and a clean state', () => {
+    const state = mountHook(() => useDebouncedState(42, jest.fn(), 300));
+    expect(state()).toMatchObject({ value: 42, isDirty: false });
+  });
+
+  it('updates the UI before the delayed save', () => {
+    const save = jest.fn();
+    const state = mountHook(() => useDebouncedState(42, save, 300));
+    act(() => state().setValue(100));
+    expect(state()).toMatchObject({ value: 100, isDirty: true });
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('saves after the configured delay', () => {
+    const save = jest.fn();
+    const state = mountHook(() => useDebouncedState(42, save, 300));
+    act(() => state().setValue(100));
+    act(() => jest.advanceTimersByTime(299));
+    expect(save).not.toHaveBeenCalled();
+    act(() => jest.advanceTimersByTime(1));
+    expect(save).toHaveBeenCalledWith(100);
+  });
+
+  it('uses the latest value at the first update window boundary', () => {
+    const save = jest.fn();
+    const state = mountHook(() => useDebouncedState(0, save, 300));
+    act(() => state().setValue(1));
+    act(() => jest.advanceTimersByTime(150));
+    act(() => state().setValue(2));
+    act(() => jest.advanceTimersByTime(150));
+    expect(save.mock.calls).toEqual([[2]]);
+  });
+
+  it('clears the dirty state after saving', () => {
+    const save = jest.fn();
+    const state = mountHook(() => useDebouncedState('hello', save, 300));
+    act(() => state().setValue('world'));
+    expect(state().isDirty).toBe(true);
+    act(() => jest.advanceTimersByTime(300));
+    expect(state().isDirty).toBe(false);
+  });
+
+  it('saves once for several changes in a window', () => {
+    const save = jest.fn();
+    const state = mountHook(() => useDebouncedState(0, save, 300));
+    act(() => {
+      state().setValue(1);
+      state().setValue(2);
+      state().setValue(3);
+    });
+    act(() => jest.advanceTimersByTime(300));
+    expect(save.mock.calls).toEqual([[3]]);
+  });
+});
 
 const DEFAULT_SETTINGS: ZoteroConnectorSettings = {
   database: 'Zotero',
@@ -26,169 +157,6 @@ const DEFAULT_SETTINGS: ZoteroConnectorSettings = {
   autoSummarize: false,
   aiPrompt: 'Summarize this.',
 };
-
-// ---------------------------------------------------------------------------
-// useToggleSetting logic replication
-// ---------------------------------------------------------------------------
-
-/**
- * Replicates useToggleSetting logic:
- * - Reads initial value from currentValue
- * - Toggle flips and calls updateSetting with new boolean
- * - External changes (currentValue changes) update local state via effect
- */
-function makeToggleSetting(
-  key: keyof ZoteroConnectorSettings,
-  currentValue: boolean
-): { isEnabled: boolean; toggle: () => void; updateFn: ReturnType<typeof jest.fn> } {
-  let isEnabled = currentValue;
-  const updateFn = jest.fn();
-  return {
-    get isEnabled() { return isEnabled; },
-    toggle() {
-      const prev = isEnabled;
-      isEnabled = !isEnabled;
-      updateFn(prev, isEnabled);
-    },
-    updateFn,
-  };
-}
-
-describe('useToggleSetting', () => {
-  it('initializes with correct isEnabled from currentValue', () => {
-    const s = makeToggleSetting('autoSummarize', false);
-    expect(s.isEnabled).toBe(false);
-    s.toggle();
-    expect(s.isEnabled).toBe(true);
-  });
-
-  it('toggle flips value and calls updateSetting with new boolean', () => {
-    const s = makeToggleSetting('autoSummarize', false);
-    s.toggle(); // false -> true
-    expect(s.isEnabled).toBe(true);
-    expect(s.updateFn).toHaveBeenCalledWith(false, true);
-  });
-
-  it('toggle from true to false calls updateSetting(false, true)', () => {
-    const s = makeToggleSetting('autoSummarize', true);
-    s.toggle(); // true -> false
-    expect(s.isEnabled).toBe(false);
-    expect(s.updateFn).toHaveBeenCalledWith(true, false);
-  });
-
-  it('multiple toggles accumulate', () => {
-    const s = makeToggleSetting('openNoteAfterImport', false);
-    s.toggle(); // F
-    s.toggle(); // T
-    s.toggle(); // F
-    expect(s.isEnabled).toBe(false);
-    expect(s.updateFn).toHaveBeenCalledTimes(3);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// useDebouncedState logic replication
-// ---------------------------------------------------------------------------
-
-type DebouncedCallback = jest.Mock;
-
-function makeDebouncedState<T>(
-  initialValue: T,
-  onChange: (val: T) => void,
-  delay = 300
-): {
-  value: T;
-  setValue: (v: T) => void;
-  isDirty: boolean;
-  advanceTimers: (ms: number) => void;
-} {
-  let currentValue = initialValue;
-  let dirty = false;
-  let timer: ReturnType<typeof setTimeout> | null = null;
-
-  const setValue = (v: T) => {
-    currentValue = v;
-    dirty = true;
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => {
-      onChange(currentValue);
-      dirty = false;
-    }, delay);
-  };
-
-  const advanceTimers = (ms: number) => {
-    if (timer) {
-      jest.advanceTimersByTime(ms);
-    }
-  };
-
-  return { get value() { return currentValue; }, setValue, get isDirty() { return dirty; }, advanceTimers };
-}
-
-describe('useDebouncedState', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  it('initializes with given value and isDirty=false', () => {
-    const onChange = jest.fn();
-    const s = makeDebouncedState(42, onChange);
-    expect(s.value).toBe(42);
-    expect(s.isDirty).toBe(false);
-  });
-
-  it('setValue immediately updates local state and sets isDirty=true', () => {
-    const onChange = jest.fn();
-    const s = makeDebouncedState(42, onChange);
-    s.setValue(100);
-    expect(s.value).toBe(100);
-    expect(s.isDirty).toBe(true);
-  });
-
-  it('debounced callback fires after delay', () => {
-    const onChange = jest.fn();
-    const s = makeDebouncedState(42, onChange, 300);
-    s.setValue(100);
-    expect(onChange).not.toHaveBeenCalled();
-    jest.advanceTimersByTime(300);
-    expect(onChange).toHaveBeenCalledWith(100);
-    expect(s.isDirty).toBe(false);
-  });
-
-  it('debounced callback receives latest value (not stale)', () => {
-    const onChange = jest.fn();
-    const s = makeDebouncedState(0, onChange, 300);
-    s.setValue(1);
-    jest.advanceTimersByTime(150);
-    s.setValue(2);
-    jest.advanceTimersByTime(150); // now total 300ms elapsed, fires with value 2
-    expect(onChange).toHaveBeenCalledWith(2);
-  });
-
-  it('isDirty resets to false after debounce fires', () => {
-    const onChange = jest.fn();
-    const s = makeDebouncedState('hello', onChange, 300);
-    s.setValue('world');
-    expect(s.isDirty).toBe(true);
-    jest.advanceTimersByTime(300);
-    expect(s.isDirty).toBe(false);
-  });
-
-  it('multiple rapid setValue calls only fire callback once (debounced)', () => {
-    const onChange = jest.fn();
-    const s = makeDebouncedState(0, onChange, 300);
-    s.setValue(1);
-    s.setValue(2);
-    s.setValue(3);
-    jest.advanceTimersByTime(300);
-    expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenCalledWith(3); // last value wins
-  });
-});
 
 // ---------------------------------------------------------------------------
 // aiSummaryAnchor anchor-in-content check

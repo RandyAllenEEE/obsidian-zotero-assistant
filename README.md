@@ -1,4 +1,4 @@
-# Zotero Integration for Obsidian
+# Zotero Assistant
 
 A powerful integration plugin that seamlessly connects Zotero with Obsidian, allowing you to manage citations, bibliographies, notes, and PDF annotations directly within your Obsidian vault.
 
@@ -26,16 +26,23 @@ A powerful integration plugin that seamlessly connects Zotero with Obsidian, all
 
 ## Installation
 
-1. Install the plugin from the Obsidian community plugins marketplace
-2. Install and enable Better BibTeX plugin in Zotero
-3. Configure Better BibTeX with your preferred Quick Copy format
-4. Restart Obsidian
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/RandyAllenEEE/obsidian-zotero-assistant/releases/latest).
+2. Copy the files into `.obsidian/plugins/obsidian-zotero-assistant/` in your vault.
+3. Restart Obsidian and enable Zotero Assistant. Start Zotero with Better BibTeX enabled before importing.
+
+For upgrades, replace the three release files and keep `data.json`. When moving from this fork's old `obsidian-zotero-integration` ID, disable the old installation, back up its folder, copy its settings to the new folder, and update external command references from `obsidian-zotero-integration:` to `obsidian-zotero-assistant:`. For buttons that use the full command name, update the `Zotero Integration:` display-name prefix to `Zotero Assistant:`.
+
+### Publishing
+
+Run the checks in [the release workflow](.github/workflows/release.yml) and push the updated default branch. Once its checks pass, push only the `X.Y.Z` tag that matches `manifest.json`. The tag run rebuilds, packages, and verifies the attachments before publishing the GitHub Release.
+
+Update the npm version with `npm version X.Y.Z --no-git-tag-version`, run `npm run bump`, and update the release notes before pushing the default branch.
 
 ## Setup
 
 ### Basic Configuration
 
-1. Open Obsidian Settings → Zotero Integration
+1. Open Obsidian Settings → Zotero Assistant
 2. Select your database (Zotero or Juris-M)
 3. If using a custom port in Zotero, enter it in the "Port number" field
 4. Set your preferred note import location
@@ -112,7 +119,11 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 ## License
 
-MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+Distributed under the [GNU General Public License version 3](LICENSE.md).
+The corresponding source and build files are available in the **Source code**
+archive of the matching [GitHub Release](https://github.com/RandyAllenEEE/obsidian-zotero-assistant/releases).
+The [PDF utility installer notices](PDF_UTILITY_NOTICES.txt) are included in
+the built plugin.
 
 ## Support
 

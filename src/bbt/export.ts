@@ -2,7 +2,7 @@ import { copyFileSync, existsSync, mkdirSync } from 'fs';
 import { Notice, TFile, htmlToMarkdown, moment, normalizePath } from 'obsidian';
 import path from 'path';
 
-import { doesEXEExist, getVaultRoot } from '../helpers';
+import { getExePath, getVaultRoot } from '../helpers';
 import {
   getFirstPdfAttachment,
   localPathToFileUri,
@@ -604,12 +604,14 @@ async function getTemplateData(
 
 export async function exportToMarkdown(
   params: ExportToMarkdownParams,
+  pdfUtilityDirectory: string,
   explicitCiteKeys?: CiteKey[]
 ): Promise<string[]> {
   const importDate = moment();
   const { database, exportFormat, settings } = params;
   const sourcePath = getATemplatePath(params);
-  const canExtract = doesEXEExist();
+  const executablePath = getExePath(pdfUtilityDirectory, settings.exeOverridePath);
+  const canExtract = existsSync(executablePath);
 
   const citeKeys = explicitCiteKeys
     ? explicitCiteKeys
@@ -666,9 +668,8 @@ export async function exportToMarkdown(
       const existingAnnotations = existingMarkdownFile
         ? getExistingAnnotations(existingMarkdown)
         : '';
-      const lastImportDate = existingMarkdownFile
-        ? getLastExport(existingMarkdown)
-        : moment(0);
+      const exportDate = getLastExport(existingMarkdown);
+      const lastImportDate = exportDate.isValid() ? exportDate : moment(0);
 
       const isFirstImport = determineIsFirstImport(app, existingMarkdownFile);
 
@@ -796,7 +797,7 @@ export async function exportToMarkdown(
               tesseractPath: settings.pdfExportImageTesseractPath,
               tessDataDir: settings.pdfExportImageTessDataDir,
             },
-            settings.exeOverridePath
+            executablePath
           );
 
           let extracted = JSON.parse(res);
@@ -929,10 +930,11 @@ function getAStyle(settings: ZoteroConnectorSettings) {
   }
 }
 
-export async function dataExplorerPrompt(settings: ZoteroConnectorSettings) {
+export async function dataExplorerPrompt(settings: ZoteroConnectorSettings, pdfUtilityDirectory: string) {
   const database = { database: settings.database, port: settings.port };
   const citeKeys = await getCiteKeys(database);
-  const canExtract = doesEXEExist();
+  const executablePath = getExePath(pdfUtilityDirectory, settings.exeOverridePath);
+  const canExtract = existsSync(executablePath);
 
   if (!citeKeys.length) return null;
 
@@ -990,7 +992,7 @@ export async function dataExplorerPrompt(settings: ZoteroConnectorSettings) {
               tesseractPath: settings.pdfExportImageTesseractPath,
               tessDataDir: settings.pdfExportImageTessDataDir,
             },
-            settings.exeOverridePath
+            executablePath
           );
 
           let extracted = JSON.parse(res);

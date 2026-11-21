@@ -174,11 +174,12 @@ export class PersistExtension implements Extension {
       retained = context.ctx._retained[id];
     }
 
-    let trimmed = body() as string;
-    if (retained) trimmed = trimmed.trimStart();
+    const rendered = body() as string;
+    // Share the line break at the join and preserve intentional blank lines and indentation.
+    const appended = /\r?\n$/.test(retained) ? rendered.replace(/^[ \t]*\r?\n/, '') : rendered;
 
     return new nunjucks.runtime.SafeString(
-      `%% begin ${id} %%${retained}${trimmed}%% end ${id} %%`
+      `%% begin ${id} %%${retained}${appended}%% end ${id} %%`
     );
   }
 

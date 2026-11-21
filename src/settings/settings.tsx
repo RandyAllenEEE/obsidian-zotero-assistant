@@ -23,6 +23,7 @@ import { useToggleSetting, useDebouncedArrayState } from './useSettings';
 interface SettingsComponentProps {
   app: App;
   settings: ZoteroConnectorSettings;
+  pdfUtilityDirectory: string;
   addCiteFormat: (format: CitationFormat) => CitationFormat[];
   updateCiteFormat: (index: number, format: CitationFormat) => CitationFormat[];
   removeCiteFormat: (index: number) => CitationFormat[];
@@ -35,6 +36,7 @@ interface SettingsComponentProps {
 function SettingsComponent({
   app,
   settings,
+  pdfUtilityDirectory,
   addCiteFormat,
   updateCiteFormat,
   removeCiteFormat,
@@ -254,7 +256,11 @@ function SettingsComponent({
 
         {/* Asset Downloader nested under Import Location */}
         <SettingGroup level={2}>
-          <AssetDownloader settings={settings} updateSetting={updateSetting} />
+          <AssetDownloader
+            settings={settings}
+            pdfUtilityDirectory={pdfUtilityDirectory}
+            updateSetting={updateSetting}
+          />
         </SettingGroup>
       </SettingGroup>
 
@@ -685,6 +691,7 @@ export class ZoteroConnectorSettingsTab extends PluginSettingTab {
       <SettingsComponent
         app={this.app}
         settings={this.plugin.settings}
+        pdfUtilityDirectory={this.plugin.pdfUtilityDirectory}
         addCiteFormat={this.addCiteFormat}
         updateCiteFormat={this.updateCiteFormat}
         removeCiteFormat={this.removeCiteFormat}
