@@ -34,7 +34,7 @@ For upgrades, replace the three release files and keep `data.json`. When moving 
 
 ### Publishing
 
-Run the checks in [the release workflow](.github/workflows/release.yml) and push the updated default branch. Once its checks pass, push only the `X.Y.Z` tag that matches `manifest.json`. The tag run rebuilds, packages, and verifies the attachments before publishing the GitHub Release.
+Run the checks in [the release workflow](.github/workflows/release.yml) and push the updated default branch. Once its checks pass, push only the `X.Y.Z` tag that matches `manifest.json`. The tag run rebuilds, packages, and verifies the attachments before publishing the GitHub Release. If GitHub does not queue that run on the fork, dispatch the same workflow on the existing version tag. A dispatch on a branch only runs checks.
 
 Update the npm version with `npm version X.Y.Z --no-git-tag-version`, run `npm run bump`, and update the release notes before pushing the default branch.
 
