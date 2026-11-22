@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom';
 import { JSONTree, LabelRenderer, ValueRenderer } from 'react-json-tree';
 
 import { dataExplorerPrompt, renderTemplates } from './bbt/export';
+import { capturePickerFocus } from './bbt/pickerFocus';
 import { PersistExtension } from './bbt/template.env';
 import { sanitizeObsidianPath } from './bbt/template.helpers';
 import ZoteroConnector from './main';
@@ -157,7 +158,8 @@ function DataExporer({ plugin }: { plugin: ZoteroConnector }) {
   >(null);
 
   const promptForSelection = React.useCallback(() => {
-    dataExplorerPrompt(plugin.settings, plugin.pdfUtilityDirectory).then((res) => {
+    const focus = capturePickerFocus(plugin.app);
+    dataExplorerPrompt(plugin.settings, plugin.pdfUtilityDirectory, focus.restore).then((res) => {
       if (!res || res.length === 0) {
         setError('No data retrieved');
       } else {

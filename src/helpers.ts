@@ -4,8 +4,13 @@ import { FileSystemAdapter, Notice, PluginManifest, Vault } from 'obsidian';
 import os from 'os';
 import path from 'path';
 
-export function getCurrentWindow() {
-  return require('electron').remote.BrowserWindow.getFocusedWindow();
+export function getCurrentWindow(ownerWindow?: Window | null) {
+  const remote = require('electron').remote;
+  const focused = remote.BrowserWindow.getFocusedWindow();
+  if (!ownerWindow || ownerWindow === window) {
+    return remote.getCurrentWindow();
+  }
+  return focused ?? remote.getCurrentWindow();
 }
 
 export function padNumber(n: number): string {

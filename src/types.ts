@@ -67,6 +67,7 @@ export interface ExportToMarkdownParams {
   settings: ZoteroConnectorSettings;
   database: DatabaseWithPort;
   exportFormat: ExportFormat;
+  onPickerClosed?: () => void;
 }
 
 export interface RenderCiteTemplateParams {

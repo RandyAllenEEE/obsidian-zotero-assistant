@@ -133,9 +133,11 @@ export async function processZoteroAnnotationNotes(
 
 export async function noteExportPrompt(
   database: DatabaseWithPort,
-  destination?: string
+  destination?: string,
+  onPickerClosed?: () => void
 ) {
   const citeKeys = await getCiteKeys(database);
+  onPickerClosed?.();
 
   if (!citeKeys.length) return;
 

@@ -8,6 +8,7 @@ import { getFileCitekey } from './frontmatter';
 import { getExeRoot } from './helpers';
 import { LoadingModal } from './bbt/LoadingModal';
 import { getCAYW } from './bbt/cayw';
+import { capturePickerFocus } from './bbt/pickerFocus';
 import { exportToMarkdown, renderCiteTemplate } from './bbt/export';
 import { summarizePdf } from './ai/ZoteroAutoSummarize';
 import {
@@ -170,45 +171,52 @@ export default class ZoteroConnector extends Plugin {
     this.addCommand({
       id: 'zdc-insert-notes',
       name: t('commands.insertNotes'),
-      editorCallback: (editor) => {
+      editorCallback: async (editor) => {
+        const focus = capturePickerFocus(this.app, editor);
         const database = {
           database: this.settings.database,
           port: this.settings.port,
         };
-        noteExportPrompt(
-          database,
-          this.app.workspace.getActiveFile()?.parent.path
-        ).then((notes) => {
-          if (notes) {
+        try {
+          const notes = await noteExportPrompt(
+            database,
+            this.app.workspace.getActiveFile()?.parent.path
+          );
+          if (notes && focus.isCurrent()) {
             insertNotesIntoCurrentDoc(editor, notes);
           }
-        });
+        } finally {
+          focus.restore();
+        }
       },
     });
 
     this.addCommand({
       id: 'zdc-import-notes',
       name: t('commands.importNotes'),
-      callback: () => {
+      callback: async () => {
+        const focus = capturePickerFocus(this.app);
         const database = {
           database: this.settings.database,
           port: this.settings.port,
         };
-        noteExportPrompt(database, this.settings.noteImportFolder)
-          .then((notes) => {
-            if (notes) {
-              return filesFromNotes(this.settings.noteImportFolder, notes);
-            }
-            return [] as string[];
-          })
-          .then((notes) => this.openNotes(notes));
+        const notes = await noteExportPrompt(
+          database,
+          this.settings.noteImportFolder,
+          focus.restore
+        );
+        if (notes) {
+          const files = await filesFromNotes(this.settings.noteImportFolder, notes);
+          await this.openNotes(files, focus.isCurrent);
+        }
       },
     });
 
     this.addCommand({
       id: 'zdc-import-notes-here',
       name: t('commands.importNotesHere'),
-      callback: () => {
+      callback: async () => {
+        const focus = capturePickerFocus(this.app);
         const database = {
           database: this.settings.database,
           port: this.settings.port,
@@ -235,11 +243,13 @@ export default class ZoteroConnector extends Plugin {
           localFormat.imageOutputPathTemplate = importFolder.length > 0 ? importFolder + '/' + localFormat.imageOutputPathTemplate : localFormat.imageOutputPathTemplate;
         }
 
-        exportToMarkdown({
+        const notes = await exportToMarkdown({
           settings: this.settings,
           database,
           exportFormat: localFormat,
-        }, this.pdfUtilityDirectory).then((notes) => this.openNotes(notes));
+          onPickerClosed: focus.restore,
+        }, this.pdfUtilityDirectory);
+        await this.openNotes(notes, focus.isCurrent);
       },
     });
 
@@ -353,26 +363,21 @@ export default class ZoteroConnector extends Plugin {
     this.addCommand({
       id: `${citationCommandIDPrefix}${format.name}`,
       name: format.name,
-      editorCallback: (editor) => {
+      editorCallback: async (editor) => {
+        const focus = capturePickerFocus(this.app, editor);
         const database = {
           database: this.settings.database,
           port: this.settings.port,
         };
-        if (format.format === 'template' && format.template.trim()) {
-          renderCiteTemplate({
-            database,
-            format,
-          }).then((res) => {
-            if (typeof res === 'string') {
-              editor.replaceSelection(res);
-            }
-          });
-        } else {
-          getCAYW(format, database).then((res) => {
-            if (typeof res === 'string') {
-              editor.replaceSelection(res);
-            }
-          });
+        try {
+          const citation = format.format === 'template' && format.template.trim()
+            ? await renderCiteTemplate({ database, format })
+            : await getCAYW(format, database);
+          if (citation && focus.isCurrent()) {
+            editor.replaceSelection(citation);
+          }
+        } finally {
+          focus.restore();
         }
       },
     });
@@ -389,16 +394,19 @@ export default class ZoteroConnector extends Plugin {
       id: `${exportCommandIDPrefix}${format.name}`,
       name: format.name,
       callback: async () => {
+        const focus = capturePickerFocus(this.app);
         const database = {
           database: this.settings.database,
           port: this.settings.port,
         };
-        this.openNotes(
+        await this.openNotes(
           await exportToMarkdown({
             settings: this.settings,
             database,
             exportFormat: format,
-          }, this.pdfUtilityDirectory)
+            onPickerClosed: focus.restore,
+          }, this.pdfUtilityDirectory),
+          focus.isCurrent
         );
       },
     });
@@ -435,46 +443,48 @@ export default class ZoteroConnector extends Plugin {
     );
   }
 
-  async openNotes(createdOrUpdatedMarkdownFilesPaths: string[]) {
+  async openNotes(
+    createdOrUpdatedMarkdownFilesPaths: string[],
+    shouldOpen: () => boolean
+  ) {
+    if (!this.settings.openNoteAfterImport || !createdOrUpdatedMarkdownFilesPaths.length) {
+      return;
+    }
     const pathOfNotesToOpen: string[] = [];
-    if (this.settings.openNoteAfterImport) {
-      // Depending on the choice, retreive the paths of the first, the last or all imported notes
-      switch (this.settings.whichNotesToOpenAfterImport) {
-        case 'first-imported-note': {
-          pathOfNotesToOpen.push(createdOrUpdatedMarkdownFilesPaths[0]);
-          break;
-        }
-        case 'last-imported-note': {
-          pathOfNotesToOpen.push(
-            createdOrUpdatedMarkdownFilesPaths[
-            createdOrUpdatedMarkdownFilesPaths.length - 1
-            ]
-          );
-          break;
-        }
-        case 'all-imported-notes': {
-          pathOfNotesToOpen.push(...createdOrUpdatedMarkdownFilesPaths);
-          break;
-        }
-      }
+    switch (this.settings.whichNotesToOpenAfterImport) {
+      case 'first-imported-note':
+        pathOfNotesToOpen.push(createdOrUpdatedMarkdownFilesPaths[0]);
+        break;
+      case 'last-imported-note':
+        pathOfNotesToOpen.push(
+          createdOrUpdatedMarkdownFilesPaths[createdOrUpdatedMarkdownFilesPaths.length - 1]
+        );
+        break;
+      case 'all-imported-notes':
+        pathOfNotesToOpen.push(...createdOrUpdatedMarkdownFilesPaths);
+        break;
     }
 
     // Force a 1s delay after importing the files to make sure that notes are created before attempting to open them.
     // A better solution could surely be found to refresh the vault, but I am not sure how to proceed!
     await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (!shouldOpen()) return;
 
-    const leaves = this.app.workspace.getLeavesOfType('markdown');
+    const workspace = this.app.workspace;
     for (const path of pathOfNotesToOpen) {
       const note = this.app.vault.getAbstractFileByPath(path);
-      const open = leaves.find(
+      if (!(note instanceof TFile)) continue;
+      const open = workspace.getLeavesOfType('markdown').find(
         (leaf) => (leaf.view as EditableFileView).file === note
       );
       if (open) {
-        app.workspace.revealLeaf(open);
-      } else if (note instanceof TFile) {
-        await this.app.workspace.getLeaf(true).openFile(note);
+        workspace.revealLeaf(open);
+        workspace.setActiveLeaf(open);
+      } else {
+        await workspace.getLeaf(true).openFile(note, { active: true });
       }
     }
+    capturePickerFocus(this.app).restore();
   }
 
   async loadSettings() {

@@ -616,6 +616,7 @@ export async function exportToMarkdown(
   const citeKeys = explicitCiteKeys
     ? explicitCiteKeys
     : await getCiteKeys(database);
+  if (!explicitCiteKeys) params.onPickerClosed?.();
   if (!citeKeys.length) return [];
 
   const libraryID = citeKeys[0].library;
@@ -930,9 +931,14 @@ function getAStyle(settings: ZoteroConnectorSettings) {
   }
 }
 
-export async function dataExplorerPrompt(settings: ZoteroConnectorSettings, pdfUtilityDirectory: string) {
+export async function dataExplorerPrompt(
+  settings: ZoteroConnectorSettings,
+  pdfUtilityDirectory: string,
+  onPickerClosed?: () => void
+) {
   const database = { database: settings.database, port: settings.port };
   const citeKeys = await getCiteKeys(database);
+  onPickerClosed?.();
   const executablePath = getExePath(pdfUtilityDirectory, settings.exeOverridePath);
   const canExtract = existsSync(executablePath);
 

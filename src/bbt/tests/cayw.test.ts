@@ -6,18 +6,12 @@ jest.mock('obsidian', () => ({
   request: jest.fn(),
   requestUrl: jest.fn(),
 }), { virtual: true });
-jest.mock('../../helpers', () => ({
-  getCurrentWindow: () => ({ blur: jest.fn(), show: jest.fn() }),
-}));
 jest.mock('../jsonRPC', () => ({ getBibFromCiteKeys: jest.fn() }));
 jest.mock('../LoadingModal', () => ({
   LoadingModal: jest.fn().mockImplementation(() => ({
     open: jest.fn(),
     close: jest.fn(),
   })),
-}));
-jest.mock('../queue', () => ({
-  ZQueue: { wait: jest.fn().mockResolvedValue(undefined), end: jest.fn() },
 }));
 
 beforeEach(() => {
